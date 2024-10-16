@@ -16,41 +16,19 @@ const getAllBooks = async (req, res) => {
 const getBookById = async (req, res) => {
     try {
         const { bookId } = req.params; 
-        
-
-        const book = await Book.findOne({ bookId });
-
         if (!book) {
             return res.status(404).json({  status: "Erorr" , message: "Book not found" });
         }
 
         res.status(200).json({status: "Success" , data: book}); 
-    } catch (error) {
+    } catch (error) { const book = await Book.findOne({ bookId });
+
         console.error("Error getting the book:", error.message);
         res.status(500).json({ status: "Erorr" , message: "Server error" });
     }
 };
-const getbookcat = async (req, res) => {
-    try {
-        const { cat } = req.body; 
-        console.log("Category:", cat);
-
-        const books = await booksModel.find({ genres: { $regex: cat, $options: 'i' } });
-
-        console.log("Books found:", books.length);
 
 
-        res.json({ status: "Success", data: books });
-    } catch (error) {
-        console.error("Error fetching books by category:", error.message);
-
-
-        res.status(500).json({
-            status: "Error",
-            message: "An error occurred while fetching books. Please try again later."
-        });
-    }
-};
 
  const addToPurchasedList = async (req, res) => {
     try {
@@ -108,30 +86,109 @@ const getPurchasedList = async (req, res) => {
 };
 const getSimilarBooks = async (req, res) => {
     try {
-      // Get the book ID and genre from query parameters
-      const { id, genre } = req.query;
-  //console.log(genre);
-      // Validate input
-      if (!id || !genre) {
-        return res.status(400).json({ message: 'Book ID or genre not provided' });
-      }
-  
-      // Find other books in the same genre, excluding the selected book itself
-      const similarBooks = await Book.find({
-        genres: { $elemMatch: { $eq: genre } }, // Check if the genres array contains the given genre
-        _id: { $ne: id },         // Exclude the current book by its ID
-      })
-        .sort({ average_rating: -1 }) // Sort by highest average rating
-        .limit(10); // Limit to the top 10 similar books
-      
-      console.log(similarBooks)
-      res.json({ data: similarBooks });
-    } catch (err) {
-      console.error("Error retrieving similar books:", err);
-      res.status(500).json({ message: 'Error retrieving similar books', error: err.message });
+        const { category } = req.params; 
+        console.log("Category:", category);
+
+        // Find books by category, sort by rating, and limit to 5
+        const books = await booksModel
+            .find({ genres: { $regex: category, $options: 'i' } })
+            .sort({ ratingsAverage: -1 }) // Assuming the rating field is named ratingsAverage
+            .limit(5); // Limit the result to the top 5 books
+
+        console.log("Books found:", books.length);
+
+        // If no books are found, you can handle it as you see fit
+        if (books.length === 0) {
+            return res.status(404).json({
+                status: "Error",
+                message: "No books found in this category."
+            });
+        }
+
+        res.json({ status: "Success", data: books });
+    } catch (error) {
+        console.error("Error fetching books by category:", error.message);
+
+        res.status(500).json({
+            status: "Error",
+            message: "An error occurred while fetching books. Please try again later."
+        });
     }
   };
-  
+  const removeFromPurchasedList = async (req, res) => {
+    try {
+        const userId = req.user.id; // Get the user ID from the authenticated user
+        const { bookId } = req.params; // Get the book ID from the request parameters
+        console.log(req.params);
+
+        // Ensure the bookId is valid
+        if (!bookId) {
+            return res.status(400).json({ status: "Error", message: "Book ID is required" });
+        }
+
+        // Find the user by their ID
+        const user = await User.findById(userId);
+        const book = await Book.findById(bookId); // Use findById instead of findOne
+
+        // Check if the user exists
+        if (!user) {
+            return res.status(404).json({ status: "Error", message: "User not found" });
+        }
+
+        // Check if the book exists
+        if (!book) {
+            return res.status(404).json({ status: "Error", message: "Book not found" });
+        }
+
+        // Find the index of the book object in the purchasedBooks array
+        const bookIndex = user.purchasedBooks.findIndex((purchasedBook) => purchasedBook._id.toString() ==bookId);
+        // Check if the bookId is present in the purchasedBooks array
+        if (bookIndex === -1) {
+            return res.status(404).json({ status: "Error", message: "Book not found in purchased list" });
+        }
+
+        // Remove the book object from the purchasedBooks array using splice
+        user.purchasedBooks.splice(bookIndex, 1);
+
+        // Save the updated user document
+        await user.save();
+
+        // Return the updated purchasedBooks list
+        return res.status(200).json({
+            status: "Success",
+            message: "Book removed from purchased list successfully",
+            purchasedBooks: user.purchasedBooks,
+        });
+    } catch (error) {
+        console.error("Error removing book from cart:", error.message);
+        return res.status(500).json({ status: "Error", message: "Server error" });
+    }
+};
+
+
+
+const getbookcat = async (req, res) => {
+    try {
+        const {category} = req.params; 
+        console.log("Category:", category);
+
+        const books = await booksModel.find({ genres: { $regex: category, $options: 'i' } });
+
+        console.log("Books found:", books.length);
+
+
+        res.json({ status: "Success", data: books });
+    } catch (error) {
+        console.error("Error fetching books by category:", error.message);
+
+
+        res.status(500).json({
+            status: "Error",
+            message: "An error occurred while fetching books. Please try again later."
+        });
+    }
+};
+
   
 
 
@@ -142,6 +199,7 @@ module.exports = {
     getBookById,
     addToPurchasedList,
     getPurchasedList,
-    getbookcat,
-    getSimilarBooks
+    getSimilarBooks,
+    removeFromPurchasedList,
+    getbookcat
 };

@@ -18,12 +18,25 @@ export default function Cart() {
         }
       );
       setCart(response.data.data); // Update the state with the fetched cart data
-      console.log(response);
     } catch (error) {
       console.error("Error fetching cart:", error);
     }
   }
-
+  async function removeHandler(bookId) {
+    try {
+      const response = await axios.patch(`http://localhost:3001/books/PurchasedList/remove/${bookId}`, {}, {
+        headers: {
+          Authorization: token,
+        },
+      });
+  
+      // Update the cart state to reflect the changes after removal
+      setCart((prevCart) => prevCart.filter((book) => book._id !== bookId));
+    } catch (error) {
+      console.error("Error removing book from cart:", error.message);
+    }
+  }
+  
   useEffect(() => {
     getCart(token);
   }, [token]); // Run the effect when the token changes
@@ -152,7 +165,7 @@ export default function Cart() {
                       <td className="px-6 py-4">
                         <a
                           onClick={() => {
-                            // removeHandler(product._id);
+                             removeHandler(product._id);
                             console.log("HBEBE");
                           }}
                           href="#"

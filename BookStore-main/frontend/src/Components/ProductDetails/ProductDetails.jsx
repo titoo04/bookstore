@@ -1,4 +1,4 @@
-import  { useContext, useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import Slider from "react-slick";
 import axios from "axios";
 import { useParams } from "react-router-dom";
@@ -25,7 +25,7 @@ export default function ProductDetails() {
   async function getProductById(id) {
     try {
       const res = await axios.get(
-        `http://localhost:3001/books/getAllBooks/${id}`,
+        `https://book-store-back-end-d-mohamedmostafa427s-projects.vercel.app/books/getAllBooks/${id}`,
         {
           headers: {
             Authorization: token,
@@ -37,30 +37,24 @@ export default function ProductDetails() {
   
       // Call getSimilarBooks with the fetched book object
       if (fetchedBook) {
-        getSimilarBooks(fetchedBook);
+        getSimilarBooks(fetchedBook.genres[0]); // Assuming genres is an array
       }
     } catch (error) {
       console.log(error);
     }
   }
   
-  async function getSimilarBooks(fetchedBook) {
+  async function getSimilarBooks(genre) {
     try {
-      // Extract the id and the first genre from the fetched book object
-      const { _id, genres } = fetchedBook;
-      const firstGenre = "Fantasy" // Assuming genres is an array
-      console.log(genres)
-      console.log(firstGenre)
       // Construct the request URL with query parameters
       const res = await axios.get(
-        `http://localhost:3001/books/similar?id=${_id}&genre=${firstGenre}`,
+        `http://localhost:3001/books/similar/${genre}`,
         {
           headers: {
             Authorization: token,
           },
         }
       );
-  
       // Set the fetched similar books
       setSimilarBooks(res.data.data);
     } catch (error) {
@@ -68,9 +62,6 @@ export default function ProductDetails() {
     }
   }
   
-  
-  
-
   const handleIncrement = () => {
     setQuantity((prevQuantity) => prevQuantity + 1);
   };
@@ -151,7 +142,7 @@ export default function ProductDetails() {
         <div>
           <div className="product_desc">
             <h2 className="font-bold text-4xl mb-4">{product?.title}</h2>
-            <p>{product.description}</p>
+            <p>{product?.description}</p>
           </div>
 
           <div className="product_rating border-b-2 pb-6">
@@ -196,7 +187,6 @@ export default function ProductDetails() {
                   onClick={handleIncrement}
                 ></i>
               </div>
-
             </div>
             <div>
               <div className="flex items-center gap-4">
@@ -229,10 +219,27 @@ export default function ProductDetails() {
         <h3 className="text-2xl font-bold mb-4">Similar Books</h3>
         <div className="grid grid-cols-2 gap-4">
           {similarBooks.map((book) => (
-            <div key={book._id} className="p-4 border rounded-lg">
-              <img src={book.coverImg} alt={book.title} className="w-full h-48 object-cover mb-3" />
-              <h4 className="font-bold">{book.title}</h4>
-              <p className="text-sm">Rating: {book.average_rating}</p>
+            <div
+              key={book._id}
+              className="w-full sm:w-1/2 md:w-1/4 overflow-hidden group my-6 bg-transparent shadow-2xl rounded-xl hover:scale-110 transition-transform duration-300"
+            >
+              <div className="relative overflow-hidden group">
+                <img
+                  className="w-full h-60 object-cover"
+                  src={book.coverImg}
+                  alt={book.title}
+                />
+                <div
+                  onClick={() => {/* Handle navigation to the book's details */}}
+                  className="absolute inset-0 bg-gray-900 bg-opacity-50 flex justify-center items-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 cursor-pointer"
+                >
+                  <h3 className="text-white text-lg font-bold">{book.title}</h3>
+                </div>
+              </div>
+              <div className="p-4">
+                <h4 className="text-lg font-bold">{book.title}</h4>
+                <p className="font-bold">{book.price} £</p>
+              </div>
             </div>
           ))}
         </div>
